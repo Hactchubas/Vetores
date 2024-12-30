@@ -42,7 +42,7 @@ O frontend permite aos usuários:
 1. Clone o repositório:
 
    ```bash
-   git clone [<repository-url>](https://github.com/Hactchubas/Vetores)
+   git clone https://github.com/Hactchubas/Vetores
    cd .\vector-operations\
    ```
 
