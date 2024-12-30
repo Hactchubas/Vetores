@@ -42,8 +42,8 @@ O frontend permite aos usuários:
 1. Clone o repositório:
 
    ```bash
-   git clone <repository-url>
-   cd <repository>
+   git clone [<repository-url>](https://github.com/Hactchubas/Vetores)
+   cd .\vector-operations\
    ```
 
 2. Navegue até o diretório do backend e inicie o servidor:
