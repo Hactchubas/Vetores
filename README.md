@@ -43,7 +43,7 @@ O frontend permite aos usuários:
 
    ```bash
    git clone https://github.com/Hactchubas/Vetores
-   cd .\vector-operations\
+   cd .\Vetores\vector-operations\
    ```
 
 2. Navegue até o diretório do backend e inicie o servidor:
