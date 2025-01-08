@@ -1,5 +1,5 @@
 
-
+use actix_files as fs;
 use actix_cors::Cors;
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
 use serde::Deserialize;
@@ -79,6 +79,7 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(|| {
         App::new()
+            .service(fs::Files::new("/", "./static").index_file("vector-visualization.html"))            
             .wrap(
                 Cors::default()
                     .allow_any_origin()
