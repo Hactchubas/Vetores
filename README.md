@@ -43,12 +43,12 @@ O frontend permite aos usuários:
 
    ```bash
    git clone https://github.com/Hactchubas/Vetores
-   cd .\vector-operations\
    ```
 
 2. Navegue até o diretório do backend e inicie o servidor:
 
-   ```bash
+   ```terminal
+   cd .\Vetores\vector-operations\
    cargo run
    ```
 
