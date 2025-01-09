@@ -63,17 +63,23 @@ impl Vector {
     }
 
     pub fn cross_product(&self, other: &Vector) -> Option<Vector> {
-        if self.dimensions.len() != 3 || other.dimensions.len() != 3 {
-            return None;
-        }
-
-        let result = vec![
-            self.dimensions[1] * other.dimensions[2] - self.dimensions[2] * other.dimensions[1],
-            self.dimensions[2] * other.dimensions[0] - self.dimensions[0] * other.dimensions[2],
-            self.dimensions[0] * other.dimensions[1] - self.dimensions[1] * other.dimensions[0]
-        ];
-
-        Some(Vector::new(result))
+        match (self.dimensions.len(), other.dimensions.len()) {
+            (2, 2) => {
+                let result = vec![
+                    self.dimensions[0] * other.dimensions[1] - self.dimensions[1] * other.dimensions[0],
+                ];
+                Some(Vector::new(result))
+            }
+            (3, 3) => {
+                let result = vec![
+                    self.dimensions[1] * other.dimensions[2] - self.dimensions[2] * other.dimensions[1],
+                    self.dimensions[2] * other.dimensions[0] - self.dimensions[0] * other.dimensions[2],
+                    self.dimensions[0] * other.dimensions[1] - self.dimensions[1] * other.dimensions[0],
+                ];
+                Some(Vector::new(result))
+            }
+            _ => None,
+        } 
     }
 
     pub fn dot_product(&self, other: &Vector) -> Option<f64> {
@@ -104,6 +110,25 @@ impl Vector {
         } else {
             None
         }
+    }
+
+    pub fn decompose(&self, other: &Self) -> Option<(Self, Self)> {
+        if let Some(projected) = self.projected_at(other) {
+            let orthogonal = self.clone() - projected.clone();
+            Some((projected, orthogonal))
+        } else {
+            None
+        }
+    }
+
+    pub fn parameterized_reaction(&self, alpha: f64, other: &Self, beta: f64) -> Option<(Self, Self)> {
+        if let Some((vn, vp)) = self.decompose(other) {
+            let n = vn.scale(alpha);
+            let p = vp.scale(-beta);
+            Some((n, p))
+        } else {
+            None
+        }        
     }
 
 }
