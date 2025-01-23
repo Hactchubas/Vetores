@@ -9,7 +9,7 @@ use structs::vector::Vector;
 
 #[get("/")]
 async fn app_home() -> actix_web::Result<NamedFile> {
-    Ok(NamedFile::open(PathBuf::from("./static/index.html"))?)
+    Ok(NamedFile::open(PathBuf::from("./static/colision-visualization.html"))?)
 }
 
 // Endpoint para soma de vetores
@@ -82,10 +82,37 @@ async fn decomposicao_vetores(data: web::Json<VectorOperationRequest>) -> impl R
 async fn reacao_vetores(data: web::Json<VectorReactionRequest>) -> impl Responder {
     let resultado = data
         .v1
-        .parameterized_reaction(data.alpha, &data.v2, data.beta);
+        .parameterized_reaction(data.alfa, &data.v2, data.beta);
     match resultado {
-        Some((vn, vp)) => HttpResponse::Ok().json((vn, vp)),
+        Some(r) => HttpResponse::Ok().json(r),
         None => HttpResponse::BadRequest().body("Não foi possível refletir o vetor"),
+    }
+}
+
+// Endpoint para reação
+#[post("/intersecsao")]
+async fn intersecsao_segmento(data: web::Json<LineSegmentsIntersectionRequest>) -> impl Responder {
+    let segment_a = data.segment_a.0.to_line_segment(&data.segment_a.1);
+    let segment_b = data.segment_b.0.to_line_segment(&data.segment_b.1);
+    
+    if segment_a.intersects(&segment_b) {
+        println!("DEU BOM");
+        HttpResponse::Ok().message_body("DEU BOM")
+    } else {
+        println!("DEU RUIM");
+        HttpResponse::Ok().message_body("DEU RUIM")
+    }
+}
+
+// Endpoint para reação
+#[post("/normal")]
+async fn normal_segmento(data: web::Json<LineSegmentsNormalRequest>) -> impl Responder {
+    let seg_vec = data.segment.0.to_owned() - data.segment.1.to_owned();
+    
+    if let Some(normal_vec) = seg_vec.normal_vec() {
+        HttpResponse::Ok().json(normal_vec)
+    } else {
+        HttpResponse::BadRequest().body("Não foi possível calcular a normal")
     }
 }
 
@@ -105,6 +132,15 @@ async fn view_reaction() -> actix_web::Result<NamedFile> {
     ))?)
 }
 
+
+// Endpoint para visualização da reação
+#[get("/colisao")]
+async fn view_colision() -> actix_web::Result<NamedFile> {
+    Ok(NamedFile::open(PathBuf::from(
+        "./static/colision-visualization.html",
+    ))?)
+}
+
 // Configuração das rotas
 fn configure_routes(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -116,10 +152,13 @@ fn configure_routes(cfg: &mut web::ServiceConfig) {
             .service(produto_vetorial)
             .service(projecao_vetores)
             .service(reacao_vetores)
+            .service(normal_segmento)
+            .service(intersecsao_segmento)
             .service(decomposicao_vetores),
     )
     .service(view_sum)
     .service(view_reaction)
+    .service(view_colision)
     .service(app_home);
 }
 
@@ -157,6 +196,16 @@ struct VectorOperationRequest {
 struct VectorReactionRequest {
     v1: Vector,
     v2: Vector,
-    alpha: f64,
+    alfa: f64,
     beta: f64,
+}
+
+#[derive(Deserialize)]
+struct LineSegmentsIntersectionRequest {
+    segment_a: (Vector, Vector),
+    segment_b: (Vector, Vector)
+}
+#[derive(Deserialize)]
+struct LineSegmentsNormalRequest {
+    segment: (Vector, Vector)
 }
