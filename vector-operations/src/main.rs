@@ -9,7 +9,9 @@ use structs::vector::Vector;
 
 #[get("/")]
 async fn app_home() -> actix_web::Result<NamedFile> {
-    Ok(NamedFile::open(PathBuf::from("./static/colision-visualization.html"))?)
+    Ok(NamedFile::open(PathBuf::from(
+        "./static/colision-visualization.html",
+    ))?)
 }
 
 // Endpoint para soma de vetores
@@ -89,18 +91,39 @@ async fn reacao_vetores(data: web::Json<VectorReactionRequest>) -> impl Responde
     }
 }
 
-// Endpoint para reação
+// Endpoint para intersecsão
 #[post("/intersecsao")]
 async fn intersecsao_segmento(data: web::Json<LineSegmentsIntersectionRequest>) -> impl Responder {
     let segment_a = data.segment_a.0.to_line_segment(&data.segment_a.1);
     let segment_b = data.segment_b.0.to_line_segment(&data.segment_b.1);
-    
+
     if segment_a.intersects(&segment_b) {
-        println!("DEU BOM");
-        HttpResponse::Ok().message_body("DEU BOM")
+        HttpResponse::Ok().json(true)
     } else {
-        println!("DEU RUIM");
-        HttpResponse::Ok().message_body("DEU RUIM")
+        HttpResponse::Ok().json(false)
+    }
+}
+
+// Endpoint para colisão
+#[post("/colisao")]
+async fn colisao(data: web::Json<LineSegmentsIntersectionRequest>) -> impl Responder {
+    let segment_a = data.segment_a.0.to_line_segment(&data.segment_a.1);
+    let segment_b = data.segment_b.0.to_line_segment(&data.segment_b.1);
+
+    if segment_a.intersects(&segment_b) {
+        if let Some(normal) = segment_b.get_normal() {
+            let res = segment_a
+                .vec_from_seg()
+                .parameterized_reaction(1.0, &normal, 1.0);
+            match res {
+                Some(r) => HttpResponse::Ok().json(r),
+                None => HttpResponse::BadRequest().body("Não foi possível refletir o vetor"),
+            }
+        } else {
+            HttpResponse::BadRequest().body("Não foi possível obter a normal do segmento")
+        }
+    } else {
+        HttpResponse::Ok().json(false)
     }
 }
 
@@ -108,7 +131,7 @@ async fn intersecsao_segmento(data: web::Json<LineSegmentsIntersectionRequest>) 
 #[post("/normal")]
 async fn normal_segmento(data: web::Json<LineSegmentsNormalRequest>) -> impl Responder {
     let seg_vec = data.segment.0.to_owned() - data.segment.1.to_owned();
-    
+
     if let Some(normal_vec) = seg_vec.normal_vec() {
         HttpResponse::Ok().json(normal_vec)
     } else {
@@ -132,7 +155,6 @@ async fn view_reaction() -> actix_web::Result<NamedFile> {
     ))?)
 }
 
-
 // Endpoint para visualização da reação
 #[get("/colisao")]
 async fn view_colision() -> actix_web::Result<NamedFile> {
@@ -154,6 +176,7 @@ fn configure_routes(cfg: &mut web::ServiceConfig) {
             .service(reacao_vetores)
             .service(normal_segmento)
             .service(intersecsao_segmento)
+            .service(colisao)
             .service(decomposicao_vetores),
     )
     .service(view_sum)
@@ -203,9 +226,9 @@ struct VectorReactionRequest {
 #[derive(Deserialize)]
 struct LineSegmentsIntersectionRequest {
     segment_a: (Vector, Vector),
-    segment_b: (Vector, Vector)
+    segment_b: (Vector, Vector),
 }
 #[derive(Deserialize)]
 struct LineSegmentsNormalRequest {
-    segment: (Vector, Vector)
+    segment: (Vector, Vector),
 }

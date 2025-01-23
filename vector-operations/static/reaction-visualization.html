@@ -4,7 +4,7 @@
 <head>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <style>
-        *{
+        * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
@@ -117,36 +117,32 @@
             </div>
 
             <div class="slider-container">
-                <label for="alpha" class="slider-label">Alpha</label>
-                <input type="range" id="alpha" class="slider" min="-2" max="2" step="0.01" value="0">
-                <span id="alphaValue">0</span>
+                <label for="alfa" class="slider-label">alfa</label>
+                <input type="range" id="alfa" class="slider" min="-2" max="2" step="0.1" value="1">
+                <span id="alfaValue">1</span>
             </div>
 
             <div class="slider-container">
                 <label for="beta" class="slider-label">Beta</label>
-                <input type="range" id="beta" class="slider" min="-2" max="2" step="0.01" value="0">
-                <span id="betaValue">0</span>
-            </div>
-
-            <div class="controls">
-                <button onclick="resetVectors()">Resetar</button>
+                <input type="range" id="beta" class="slider" min="-2" max="2" step="0.1" value="1">
+                <span id="betaValue">1</span>
             </div>
 
             <script>
                 // Initialize variables to store slider values
-                let alpha = 0;
-                let beta = 0;
+                let alfa = 1;
+                let beta = 1;
 
                 // Get references to the sliders and value displays
-                const alphaSlider = document.getElementById('alpha');
+                const alfaSlider = document.getElementById('alfa');
                 const betaSlider = document.getElementById('beta');
-                const alphaValueDisplay = document.getElementById('alphaValue');
+                const alfaValueDisplay = document.getElementById('alfaValue');
                 const betaValueDisplay = document.getElementById('betaValue');
 
-                // Update alpha value when the slider changes
-                alphaSlider.addEventListener('input', function () {
-                    alpha = parseFloat(alphaSlider.value);
-                    alphaValueDisplay.textContent = alpha.toFixed(2);  // Display the alpha value with two decimal places
+                // Update alfa value when the slider changes
+                alfaSlider.addEventListener('input', function () {
+                    alfa = parseFloat(alfaSlider.value);
+                    alfaValueDisplay.textContent = alfa.toFixed(2);  // Display the alfa value with two decimal places
                 });
 
                 // Update beta value when the slider changes
@@ -165,14 +161,16 @@
                 let incidentVector = null;
                 let normalVector = null;
                 let reflectedVector = null;
-                let slideVector = null;
 
                 let vp = null;
                 let vn = null;
+                let vp_r = null;
+                let vn_r = null;
+                let reac_result = null;
 
                 let block = {
-                    x: 0,
-                    y: -100,
+                    x: -200,
+                    y: -200,
                     w: 2000,
                     h: 10,
                     dragging: false,
@@ -184,7 +182,7 @@
                     let myCanvas = createCanvas(800, 600);
                     myCanvas.parent("#canvas-destination");
                     textAlign(CENTER, CENTER);
-                    normalVector = createVector(0, 100);
+                    normalVector = createVector(0, 75);
                 }
 
                 function draw() {
@@ -197,19 +195,23 @@
                     incidentVector = createVector(mouseX - width / 2, mouseY - height / 2);
                     drawVector(createVector(0, 0), incidentVector, color(0, 255, 0), 2, "I");
 
-                    // updateReflectedVector();
-                    //if (reflectedVector) {
-                    //     drawVector(incidentVector, reflectedVector, color(255, 0, 0), 2, "R");
-                    // }
-                    //updateSlideVector();
-                    //if (slideVector) {
-                    //    drawVector(createVector(0, 0), slideVector, color(255, 0, 255), 2, "S");
-                    //}
-
-                    updateDecompositionVectors();
+                    updateDecompositionVectors(incidentVector);
                     if (vp && vn) {
-                        drawVector(createVector(0, 0), vp, color(255, 0, 0), 2, "Vp");
-                        drawVector(createVector(0, 0), vn, color(0, 0, 255), 2, "Vn");
+                        drawVector(createVector(0, 0), vp, color(255, 0, 0), 2, "Vn");
+                        drawVector(createVector(0, 0), vn, color(0, 0, 255), 2, "Vp");
+                    }
+
+                    reactionVector(incidentVector, normalVector)
+                        .then(res => {
+                            if (res) {
+                                reac_result = res
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error drawing vectors:', error);
+                        });
+                    if (reac_result) {
+                        drawVector(createVector(mouseX - width / 2, mouseY - height / 2), reac_result, color(255, 0, 0), 2, "R");
                     }
 
                     drawBlock();
@@ -269,10 +271,10 @@
                     pop();
                 }
 
-                async function updateDecompositionVectors() {
+                async function updateDecompositionVectors(vector) {
                     try {
                         let v1 = {
-                            dimensions: [incidentVector.x, incidentVector.y]
+                            dimensions: [vector.x, vector.y]
                         };
                         let v2 = {
                             dimensions: [normalVector.x, normalVector.y]
@@ -300,6 +302,38 @@
                     }
                 }
 
+                async function reactionVector(incident, normal) {
+
+                    if (incident && normal) {
+                        const v1 = { dimensions: [incident.x, incident.y] };
+                        const v2 = { dimensions: [normal.x, normal.y] };
+
+                        try {
+                            const response = await requestReaction(v1, v2);
+                            const result = await response.json();
+                            const reac_vector = createVector(result.dimensions[0], result.dimensions[1]);
+                            return reac_vector // Retorna os vetores de reação
+                        } catch (error) {
+                            console.error('Error calculating reaction vector:', error);
+                        }
+                    }
+                }
+
+                function requestReaction(v1, v2) {
+                    return fetch(baseUrl + '/reacao', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            v1: v1,
+                            v2: v2,
+                            alfa: alfa,
+                            beta: beta
+                        })
+                    });
+                }
+
                 function resetVectors() {
                     reflectedVector = null;
                 }
@@ -324,7 +358,6 @@
                 function mouseReleased() {
                     block.dragging = false;
                 }
-
                 function mouseDragged() {
                     if (block.dragging) {
                         // Update the position of the block based on mouse movement

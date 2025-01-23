@@ -3,40 +3,48 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LineSegment {
-    x: (f64, f64),
-    y: (f64, f64),
+    x: Vector,
+    y: Vector,
 }
 
 impl LineSegment {
-    pub fn new(x: (f64, f64), y: (f64, f64)) -> Self {
+    pub fn new(x: Vector, y: Vector) -> Self {
         LineSegment { x, y }
     }
 
+    pub fn get_normal(&self) -> Option<Vector> {
+        let seg_vec = self.x.subtract(&self.y);
+        seg_vec.normal_vec()
+    }
+
+    pub fn vec_from_seg(&self) -> Vector {
+        self.y.subtract(&self.x)
+    }
+
     pub fn intersects(&self, other: &Self) -> bool {
-        let (cx, cy) = other.x;
-        let (dx, dy) = other.y;
-        let (bx, by) = self.y;
-        let (ax, ay) = self.x;
+        let c_vec = other.x.to_owned();
+        let d_vec = other.y.to_owned();
+        let b_vec = self.y.to_owned();
+        let a_vec = self.x.to_owned();
 
-        let A = Vector::new(vec![ax, ay]);
-        let AC = Vector::new(vec![cx, cy]) - A.to_owned();
-        let AD = Vector::new(vec![dx, dy]) - A.to_owned();
-        let AB = Vector::new(vec![bx, by]) - A.to_owned();
+        let ac = c_vec.subtract(&a_vec);
+        let ad = d_vec.subtract(&a_vec);
+        let ab = b_vec.subtract(&a_vec);
 
-        let C = Vector::new(vec![ax, ay]);
-        let CD = Vector::new(vec![dx, dy]) - C.to_owned();
-        let CA = Vector::new(vec![ax, ay]) - C.to_owned();
-        let CB = Vector::new(vec![bx, by]) - C.to_owned();
+        let cd = d_vec.subtract(&c_vec);
+        let ca = a_vec.subtract(&c_vec);
+        let cb = b_vec.subtract(&c_vec);
 
-        match (
-            (AB.cross_product(&AC), AB.cross_product(&AD)),
-            (CD.cross_product(&CA), CD.cross_product(&CB)),
-        ) {
-            ((Some(ABxAC), Some(ABxAD)), (Some(CDxCA), Some(CDxCB)))
-                if (ABxAC.signal_in_r(3) ^ ABxAD.signal_in_r(3))
-                    && (CDxCA.signal_in_r(3) ^ CDxCB.signal_in_r(3)) =>
-            {
-                true
+        match (ab.cross_product(&ac), ab.cross_product(&ad)) {
+            (Some(ab_x_ac), Some(ab_x_ad)) if (ab_x_ac.signal_in_r(3) ^ ab_x_ad.signal_in_r(3)) => {
+                match (cd.cross_product(&ca), cd.cross_product(&cb)) {
+                    (Some(cd_x_ca), Some(cd_x_cb))
+                        if (cd_x_ca.signal_in_r(3) ^ cd_x_cb.signal_in_r(3)) =>
+                    {
+                        true
+                    }
+                    _ => false,
+                }
             }
             _ => false,
         }

@@ -203,10 +203,10 @@
                 function setup() {
                     let myCanvas = createCanvas(800, 600);
                     myCanvas.parent("#canvas-destination");
+                    frameRate(20);
                     textAlign(CENTER, CENTER);
-
-                    let w2 = width / 2
-                    let h2 = height / 2
+                    let w2 = width / 15
+                    let h2 = height / 15
                     edges = {
                         up: new Wall([-w2, h2], [w2, h2]),
                         right: new Wall([w2, h2], [w2, -h2]),
@@ -214,17 +214,25 @@
                         left: new Wall([-w2, -h2], [-w2, h2]),
                     }
 
-                    character.pos = createVector(100, 100)
-                    character.vel = createVector(20, 30)
+                    character.pos = createVector(0, 0)
+                    character.vel = createVector(15, 30)
 
                 }
-
+                var stopDraw = false;
+                var lastEdge = null;
                 function draw() {
                     goCartesian()
 
-
+                    
                     let { vel, pos } = character
-                    if (vel && pos) {
+                    updateVel(character)
+                    updatePos(character)
+                    drawCharacter()
+
+                }
+
+                function updatePos({ vel, pos }) {
+                    if (pos) {
                         const vel_req = { dimensions: [vel.x, vel.y] };
                         const pos_req = { dimensions: [pos.x, pos.y] };
                         updateCharacterPos(vel_req, pos_req)
@@ -244,17 +252,40 @@
                                 console.log(e)
                             })
 
+                    }
+                }
 
-                        Promise.all(
-                            updateCharacterVel(vel_req, pos_req)
-                        )
+                function updateVel({ vel, pos }) {
+                    if (vel) {
+                        const vel_req = { dimensions: [vel.x, vel.y] };
+                        const pos_req = { dimensions: [pos.x, pos.y] };
+                        Promise.all(updateCharacterVel(vel_req, pos_req))
                             .then(values => {
                                 return values.map(value => value.text())
                             })
                             .then(data => {
                                 Promise.all(data)
                                     .then(data => {
-                                        console.log(data)
+                                        let index = data.indexOf('true')
+                                        if (index != -1 && !stopDraw && lastEdge != index) {
+                                            switch (index) {
+                                                case 0:
+                                                    character.vel.y = -character.vel.y
+                                                    break;
+                                                case 1:
+                                                    character.vel.x = -character.vel.x
+                                                    break;
+                                                case 2:
+                                                    character.vel.y = -character.vel.y
+                                                    break;
+                                                case 3:
+                                                    character.vel.x = -character.vel.x
+                                                    break;
+                                                default: break;
+                                            }
+                                            //stopDraw = true
+                                            lastEdge = index
+                                        } 
                                     })
                             })
                             .catch(e => {
@@ -263,8 +294,6 @@
 
 
                     }
-                    drawCharacter()
-
                 }
 
                 async function updateCharacterPos(u, v) {
