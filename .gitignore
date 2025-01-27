@@ -1,6 +1,7 @@
 git # Compiled output
 /target/
-vector-operations/target/
+/vector-operations/target
+
 
 # Rust/Cargo related files
 **/*.rs.bk

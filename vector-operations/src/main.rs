@@ -32,7 +32,7 @@ async fn subtracao_vetores(data: web::Json<VectorOperationRequest>) -> impl Resp
 #[post("/redimensionar")]
 async fn redimensionar(data: web::Json<VectorOperationRequest>) -> impl Responder {
     if let Some(k) = data.scalar {
-        let resultado = data.v1.scale(k);
+        let resultado = &data.v1 * k;
         HttpResponse::Ok().json(resultado)
     } else {
         HttpResponse::BadRequest().body("Escalar não fornecido")

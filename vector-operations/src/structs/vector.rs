@@ -14,18 +14,18 @@ impl Vector {
         Vector { dimensions: dims }
     }
 
-    pub fn subtract(&self, other: &Self) -> Self {
-        let (new_self, new_other) = self.equalize_dimensions(&other);
+    // pub fn subtract(&self, other: &Self) -> Self {
+    //     let (new_self, new_other) = self.equalize_dimensions(&other);
 
-        Vector::new(
-            new_self
-                .dimensions
-                .iter()
-                .zip(new_other.dimensions.iter())
-                .map(|(s_di, o_di)| s_di - o_di)
-                .collect(),
-        )
-    }
+    //     Vector::new(
+    //         new_self
+    //             .dimensions
+    //             .iter()
+    //             .zip(new_other.dimensions.iter())
+    //             .map(|(s_di, o_di)| s_di - o_di)
+    //             .collect(),
+    //     )
+    // }
 
     pub fn cardinality(&self) -> usize {
         self.dimensions.len()
@@ -47,41 +47,28 @@ impl Vector {
             .sqrt()
     }
 
-    // fn invert(&self) -> Self {
-    //     Vector::new(self.dimensions.iter().map(|&di| -di).collect())
-    // }
-
-    pub fn scale(&self, m: f64) -> Self {
-        let result = self.dimensions.iter().map(|&di| di * m).collect();
-
-        Vector::new(result)
-    }
-
     fn unit(&self) -> Self {
-        self.scale(1 as f64 / self.modulus()).clone()
+        self * (1 as f64 / self.modulus())
     }
 
     fn equalize_dimensions(&self, other: &Self) -> (Self, Self) {
-        let this_length = self.dimensions.len();
-        let other_length = other.dimensions.len();
+        let mut new_self = self.clone();
+        let mut new_other = other.clone();
+        let self_len = new_self.dimensions.len();
+        let other_len = new_other.dimensions.len();
 
-        let mut smaller: Vector;
-        if this_length < other_length {
-            smaller = self.clone();
-            smaller
+        if self_len < other_len {
+            new_self
                 .dimensions
-                .extend(vec![0 as f64; other_length - this_length]);
-
-            (smaller.clone(), other.clone())
-        } else if this_length > other_length {
-            smaller = other.clone();
-            smaller
+                .extend(vec![0 as f64; other_len - self_len]);
+            (new_self, new_other)
+        } else if self_len > other_len {
+            new_other
                 .dimensions
-                .extend(vec![0 as f64; this_length - other_length]);
-
-            (self.clone(), smaller)
+                .extend(vec![0 as f64; self_len - other_len]);
+            (new_self, new_other)
         } else {
-            (self.clone(), other.clone())
+            (new_self, new_other)
         }
     }
 
@@ -115,7 +102,7 @@ impl Vector {
         }
     }
 
-    pub fn dot_product(&self, other: &Vector) -> Option<f64> {
+    pub fn dot_product(&self, other: &Self) -> Option<f64> {
         let (new_self, new_other) = self.equalize_dimensions(other);
 
         let result = new_self
@@ -131,7 +118,7 @@ impl Vector {
     pub fn projected_at(&self, other: &Self) -> Option<Self> {
         let unitary_other = other.unit();
         if let Some(p) = self.dot_product(&unitary_other) {
-            let res = unitary_other.scale(p);
+            let res = &unitary_other * p;
             Some(res)
         } else {
             None
@@ -148,7 +135,7 @@ impl Vector {
 
     pub fn decompose(&self, other: &Self) -> Option<(Self, Self)> {
         if let Some(projected) = self.projected_at(other) {
-            let orthogonal = self.clone() - projected.clone();
+            let orthogonal = self - &&projected;
             Some((orthogonal, projected))
         } else {
             None
@@ -157,8 +144,8 @@ impl Vector {
 
     pub fn parameterized_reaction(&self, alpha: f64, other: &Self, beta: f64) -> Option<Self> {
         if let Some((vn, vp)) = self.decompose(other) {
-            let n = vn.scale(alpha);
-            let p = vp.scale(-beta);
+            let n = &vn * alpha;
+            let p = &vp * (-beta);
             let reac = n + p;
             Some(reac)
         } else {
@@ -183,12 +170,10 @@ impl Vector {
     }
 }
 
-impl Add<Self> for Vector {
+impl Add<&Self> for &Vector {
     type Output = Vector;
-
-    fn add(self, other: Self) -> Self::Output {
-        let (new_self, new_other) = self.equalize_dimensions(&other);
-
+    fn add(self, other: &Self) -> Self::Output {
+        let (new_self, new_other) = self.equalize_dimensions(other);
         Vector::new(
             new_self
                 .dimensions
@@ -199,13 +184,23 @@ impl Add<Self> for Vector {
         )
     }
 }
+impl Add<&Self> for Vector {
+    type Output = Self;
+    fn add(self, other: &Self) -> Self::Output {
+        &self + &other
+    }
+}
+impl Add<Self> for Vector {
+    type Output = Self;
+    fn add(self, other: Self) -> Self::Output {
+        self + &other
+    }
+}
 
-impl Sub for Vector {
+impl Sub<Self> for &Vector {
     type Output = Vector;
-
     fn sub(self, other: Self) -> Self::Output {
         let (new_self, new_other) = self.equalize_dimensions(&other);
-
         Vector::new(
             new_self
                 .dimensions
@@ -216,18 +211,35 @@ impl Sub for Vector {
         )
     }
 }
+impl Sub<Self> for Vector {
+    type Output = Self;
+    fn sub(self, other: Self) -> Self::Output {
+        &self - &other
+    }
+}
+// impl Sub<Self> for &Vector {
+//     type Output = Self;
+//     fn sub(self, other: Self) -> Self::Output {
+//         self - &other
+//     }
+// }
 
-impl Mul for Vector {
+impl Mul<&Self> for &Vector {
     type Output = f64;
-
-    fn mul(self, other: Self) -> Self::Output {
-        let (new_self, new_other) = self.equalize_dimensions(&other);
-
+    fn mul(self, other: &Self) -> Self::Output {
+        let (new_self, new_other) = self.equalize_dimensions(other);
         new_self
             .dimensions
             .iter()
             .zip(new_other.dimensions.iter())
             .map(|(s_di, o_di)| s_di - o_di)
             .sum::<f64>()
+    }
+}
+impl Mul<f64> for &Vector {
+    type Output = Vector;
+    fn mul(self, m: f64) -> Self::Output {
+        let result = self.dimensions.iter().map(|&di| di * m).collect();
+        Vector::new(result)
     }
 }
